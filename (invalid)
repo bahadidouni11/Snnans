@@ -1,0 +1,67 @@
+from telegram import Update, ReplyKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
+import random
+
+# ---------- CONFIG ----------
+BOT_TOKEN = "8174026881:AAF3Z5I6PR2oD8PGpBGPogMtcy7TAoUDZ4s"
+
+# ---------- USERS POINTS ----------
+users_points = {}  # لتخزين نقاط المستخدمين
+
+# ---------- EVENT TASKS ----------
+easy_tasks = ["شاهد فيديو هالوين 🎃", "شارك صورة مخيفة 👻", "أرسل رمز مخفي للبوت 🕸️"]
+medium_tasks = ["حل لغز الهالوين 🕷️", "ادعُ صديقًا للانضمام 🎃", "اعثر على الجوكر المخفي 👻"]
+hard_task = "أكمل 3 مهام متوسطة للحصول على نقاط مضاعفة 🏆"
+
+# ---------- START COMMAND ----------
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        ["🎃 المهام المخيفة", "🕸️ الجوائز الخاصة"],
+        ["👻 معلومات عن الحدث", "🏆 التحديات اليومية"]
+    ]
+    await update.message.reply_text(
+        "👻 مرحباً بك في **حدث هالوين**!\n🎃 اكمل المهام واحصل على جوائز مخيفة!",
+        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    )
+
+# ---------- TASK HANDLER ----------
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    text = update.message.text
+
+    # إنشاء نقاط للمستخدم إذا لم يكن موجود
+    if user_id not in users_points:
+        users_points[user_id] = 0
+
+    # الرد على اختيار المهام
+    if text == "🎃 المهام المخيفة":
+        task = random.choice(easy_tasks + medium_tasks)
+        await update.message.reply_text(f"🔮 مهمتك: {task}\nأرسل 'تم' عند الانتهاء!")
+
+    elif text == "🏆 التحديات اليومية":
+        await update.message.reply_text(f"🔥 مهمة اليوم: {hard_task}\nأرسل 'تم' عند الانتهاء!")
+
+    elif text == "🕸️ الجوائز الخاصة":
+        points = users_points[user_id]
+        await update.message.reply_text(f"🎁 لديك {points} نقطة حاليًا!")
+
+    elif text == "👻 معلومات عن الحدث":
+        await update.message.reply_text("🕷️ الحدث مستمر حتى 31 أكتوبر!\nاكمل المهام واربح جوائز مخيفة!")
+
+    # عند إرسال المستخدم "تم"
+    elif text.lower() == "تم":
+        # نقاط عشوائية حسب المهمة
+        points_earned = random.randint(5, 20)
+        users_points[user_id] += points_earned
+        await update.message.reply_text(f"✅ أحسنت! لقد ربحت {points_earned} نقاط!")
+
+    else:
+        await update.message.reply_text("❌ اختر خيار من القائمة أو أرسل 'تم' عند إنجاز المهمة!")
+
+# ---------- MAIN ----------
+app = ApplicationBuilder().token(BOT_TOKEN).build()
+app.add_handler(CommandHandler("start", start))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+print("Bot is running...")
+app.run_polling()
